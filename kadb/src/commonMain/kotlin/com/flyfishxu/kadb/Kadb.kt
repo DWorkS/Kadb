@@ -236,7 +236,8 @@ class Kadb(
                 AdbConnection.connect(
                     channel = supplier(),
                     hostKeySet = loadKeySet(),
-                    options = options
+                    options = options,
+                    ioTimeoutMs = socketTimeout
                 )
             } else {
                 AdbConnection.connect(

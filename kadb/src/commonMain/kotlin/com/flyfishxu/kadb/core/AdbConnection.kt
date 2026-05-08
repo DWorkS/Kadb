@@ -119,7 +119,6 @@ internal class AdbConnection internal constructor(
         ): Pair<AdbConnection, TransportChannel> {
             return connectChannel(channel, "", 0, hostKeySet, options, ioTimeoutMs)
         }
-
         private suspend fun connectChannel(
             initialChannel: TransportChannel,
             host: String,
