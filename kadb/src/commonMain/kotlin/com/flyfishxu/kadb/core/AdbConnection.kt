@@ -105,10 +105,33 @@ internal class AdbConnection internal constructor(
             ioTimeoutMs: Int = 0
         ): Pair<AdbConnection, TransportChannel> {
             val connectTimeout = connectTimeoutMs.toLong()
+            val channel = TransportFactory.connect(host, port, connectTimeout)
+            return connectChannel(channel, host, port, hostKeySet, options, ioTimeoutMs)
+        }
+
+        // Connect using a pre-built transport channel (e.g. USB OTG).
+        // TLS (STLS) is not supported over this path because USB ADB uses plain auth only.
+        internal suspend fun connect(
+            channel: TransportChannel,
+            hostKeySet: HostKeySet,
+            options: KadbOptions = KadbOptions(),
+            ioTimeoutMs: Int = 0
+        ): Pair<AdbConnection, TransportChannel> {
+            return connectChannel(channel, "", 0, hostKeySet, options, ioTimeoutMs)
+        }
+
+        private suspend fun connectChannel(
+            initialChannel: TransportChannel,
+            host: String,
+            port: Int,
+            hostKeySet: HostKeySet,
+            options: KadbOptions,
+            ioTimeoutMs: Int
+        ): Pair<AdbConnection, TransportChannel> {
             val ioTimeout = ioTimeoutMs.toLong()
             var authKeyIndex = 0
 
-            var channel: TransportChannel = TransportFactory.connect(host, port, connectTimeout)
+            var channel: TransportChannel = initialChannel
             var reader = AdbReader(channel.asOkioSource(ioTimeout))
             var writer = AdbWriter(channel.asOkioSink(ioTimeout))
 

@@ -33,6 +33,9 @@ class Kadb(
     private var options: KadbOptions = KadbOptions()
     private var connection: Pair<AdbConnection, TransportChannel>? = null
 
+    // Optional supplier used in place of TransportFactory (e.g. for USB OTG transport).
+    private var channelSupplier: (suspend () -> TransportChannel)? = null
+
     private constructor(
         host: String,
         port: Int,
@@ -41,6 +44,16 @@ class Kadb(
         options: KadbOptions
     ) : this(host, port, connectTimeout, socketTimeout) {
         this.options = options
+    }
+
+    // Internal constructor for non-TCP transports such as USB OTG.
+    // The channelSupplier is invoked each time a new transport connection is needed.
+    internal constructor(
+        channelSupplier: suspend () -> TransportChannel,
+        options: KadbOptions = KadbOptions()
+    ) : this("", 0) {
+        this.options = options
+        this.channelSupplier = channelSupplier
     }
 
     fun connectionCheck(): Boolean = connection?.second?.isOpen == true
@@ -218,14 +231,23 @@ class Kadb(
 
     private fun newConnection(): Pair<AdbConnection, TransportChannel> {
         return runBlocking {
-            AdbConnection.connect(
-                host = host,
-                port = port,
-                hostKeySet = loadKeySet(),
-                options = options,
-                connectTimeoutMs = connectTimeout,
-                ioTimeoutMs = socketTimeout
-            )
+            val supplier = channelSupplier
+            if (supplier != null) {
+                AdbConnection.connect(
+                    channel = supplier(),
+                    hostKeySet = loadKeySet(),
+                    options = options
+                )
+            } else {
+                AdbConnection.connect(
+                    host = host,
+                    port = port,
+                    hostKeySet = loadKeySet(),
+                    options = options,
+                    connectTimeoutMs = connectTimeout,
+                    ioTimeoutMs = socketTimeout
+                )
+            }
         }
     }
 
