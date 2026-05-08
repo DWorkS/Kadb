@@ -1,6 +1,7 @@
 package com.flyfishxu.kadb
 
 import android.content.Context
+import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbInterface
 import android.os.Build
@@ -111,14 +112,14 @@ actual fun Kadb.readMode(file: File): Int {
  * ```
  *
  * @param connection An open [UsbDeviceConnection] with permission for the ADB interface.
- * @param iface      The ADB bulk-transfer [UsbInterface] on the device.
+ * @param usbDevice  The [UsbDevice] representing the Android device to connect to.
  * @param options    Optional protocol options (e.g. [KadbOptions.delayedAckMode]).
  */
 fun Kadb.Companion.createUsb(
     connection: UsbDeviceConnection,
-    iface: UsbInterface,
+    usbDevice: UsbDevice,
     options: KadbOptions = KadbOptions()
 ): Kadb = Kadb(
-    channelSupplier = { UsbTransportChannel.open(connection, iface) },
+    channelSupplier = { UsbTransportChannel.open(connection, usbDevice) },
     options = options
 )

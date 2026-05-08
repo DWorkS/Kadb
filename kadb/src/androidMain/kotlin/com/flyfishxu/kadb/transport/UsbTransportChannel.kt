@@ -16,6 +16,7 @@
 package com.flyfishxu.kadb.transport
 
 import android.hardware.usb.UsbConstants
+import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
@@ -112,9 +113,10 @@ internal class UsbTransportChannel private constructor(
          * @throws IllegalArgumentException if the required IN/OUT bulk endpoints cannot be found.
          * @throws IOException              if claiming the interface fails.
          */
-        fun open(connection: UsbDeviceConnection, iface: UsbInterface): UsbTransportChannel {
+        fun open(connection: UsbDeviceConnection, usbDevice: UsbDevice): UsbTransportChannel {
             var epIn: UsbEndpoint? = null
             var epOut: UsbEndpoint? = null
+            val iface = findAdbInterface(usbDevice) ?: throw IllegalArgumentException("Device has no ADB interface")
             for (i in 0 until iface.endpointCount) {
                 val ep = iface.getEndpoint(i)
                 if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
@@ -130,6 +132,18 @@ internal class UsbTransportChannel private constructor(
                 throw IOException("Failed to claim USB interface for ADB")
             }
             return UsbTransportChannel(connection, iface, epIn, epOut)
+        }
+
+        fun findAdbInterface(usbDevice: UsbDevice): UsbInterface? {
+            for (i in 0 until usbDevice.interfaceCount) {
+                val iface = usbDevice.getInterface(i)
+                if (iface.interfaceClass    == 255 &&
+                    iface.interfaceSubclass == 66 &&
+                    iface.interfaceProtocol == 1) {
+                    return iface
+                }
+            }
+            return null
         }
 
         private fun timeoutMs(timeout: Long, unit: TimeUnit): Int =

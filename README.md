@@ -190,7 +190,7 @@ Kadb.create("127.0.0.1", 5555).tcpForward(
 ```bash
 git clone https://github.com/DWorkS/Kadb.git
 cd Kadb
-./gradlew :kadb:assembleRelease
+./gradlew build
 ```
 
 The Android AAR artifact is produced at:
