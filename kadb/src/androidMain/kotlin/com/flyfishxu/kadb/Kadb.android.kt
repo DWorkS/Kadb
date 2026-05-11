@@ -1,8 +1,12 @@
 package com.flyfishxu.kadb
 
 import android.content.Context
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbInterface
 import android.os.Build
 import androidx.documentfile.provider.DocumentFile
+import com.flyfishxu.kadb.transport.UsbTransportChannel
 import okio.sink
 import okio.source
 import java.io.File
@@ -83,3 +87,39 @@ actual fun Kadb.readMode(file: File): Int {
         mode
     }
 }
+
+/**
+ * Create a [Kadb] instance that communicates with a USB-attached Android device over ADB OTG.
+ *
+ * The caller is responsible for obtaining [UsbDeviceConnection] permission via
+ * [android.hardware.usb.UsbManager] and for finding the correct ADB [UsbInterface] on the device
+ * (typically interface class 0xFF / subclass 0x42 / protocol 0x01).
+ *
+ * All [Kadb] features – shell, sync/push/pull, install, port forwarding – work over USB in the
+ * same way as over TCP/IP.  Wireless pairing is not applicable to USB connections.
+ *
+ * Example:
+ * ```kotlin
+ * val usbManager = getSystemService(USB_SERVICE) as UsbManager
+ * val device = usbManager.deviceList.values.first { it.isAdbDevice() }
+ * val connection = usbManager.openDevice(device)
+ * val iface = device.findAdbInterface()  // your helper that picks the ADB interface
+ * val kadb = Kadb.createUsb(connection, iface)
+ * kadb.use {
+ *     val result = it.shell("echo hello")
+ *     println(result.output)
+ * }
+ * ```
+ *
+ * @param connection An open [UsbDeviceConnection] with permission for the ADB interface.
+ * @param usbDevice  The [UsbDevice] representing the Android device to connect to.
+ * @param options    Optional protocol options (e.g. [KadbOptions.delayedAckMode]).
+ */
+fun Kadb.Companion.createUsb(
+    connection: UsbDeviceConnection,
+    usbDevice: UsbDevice,
+    options: KadbOptions = KadbOptions()
+): Kadb = Kadb(
+    channelSupplier = { UsbTransportChannel.open(connection, usbDevice) },
+    options = options
+)
